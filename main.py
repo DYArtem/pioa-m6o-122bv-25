@@ -1,72 +1,92 @@
-from database import books, add_book, get_all_books, filter_books, update_book, delete_book
+from database import BookDB
 
-def show_books(book_list):
-    if not book_list:
-        print("Нет книг.")
-        return
-    print("\n" + "-" * 70)
-    for b in book_list:
-        print(f"{b['id']} | {b['title']} | {b['author']} | {b['year']} | {b['status']}")
-    print("-" * 70)
+db = BookDB()
 
-def main():
-    add_book("я", "не знаю", 1111, "в наличии")
-    add_book("что-то", "какой-то", 1212, "выдана")
+db.add("Я", "Знаю", 1112, "в наличии")
+db.add("Лень", "2х Лень", 1111, "выдана")
 
-    while True:
-        print("\n--- Меню ---")
-        print("1. Показать все книги")
-        print("2. Добавить книгу")
-        print("3. Найти книги")
-        print("4. Обновить книгу")
-        print("5. Удалить книгу")
-        print("6. Выйти")
-
-        choice = input("Выберите действие: ")
-
-        if choice == "1":
-            show_books(get_all_books())
-
-        elif choice == "2":
-            try:
-                title = input("Название: ")
-                author = input("Автор: ")
-                year = int(input("Год: "))
-                status = input("Статус (в наличии/выдана): ")
-                add_book(title, author, year, status)
-            except ValueError:
-                print("Ошибка: год должен быть числом")
-
-        elif choice == "3":
-            field = input("По какому полю искать (title/author/year/status): ")
-            value = input("Что искать: ")
-            result = filter_books(field, value)
-            show_books(result)
-
-        elif choice == "4":
-            try:
-                book_id = int(input("ID книги: "))
-                title = input("Новое название (Enter - не менять): ")
-                author = input("Новый автор (Enter - не менять): ")
-                year = input("Новый год (Enter - не менять): ")
-                status = input("Новый статус (Enter - не менять): ")
-                update_book(book_id, title, author, year, status)
-            except ValueError:
-                print("Ошибка: ID должен быть числом")
-
-        elif choice == "5":
-            try:
-                book_id = int(input("ID книги: "))
-                delete_book(book_id)
-            except ValueError:
-                print("Ошибка: ID должен быть числом")
-
-        elif choice == "6":
-            print("Пока!")
-            break
-
+while True:
+    print("БИБЛИОТЕКА")
+    print("1. Все книги")
+    print("2. Добавить книгу")
+    print("3. Найти книгу")
+    print("4. Обновить книгу")
+    print("5. Удалить книгу")
+    print("6. Сортировка")
+    print("7. Выход")
+    
+    choice = input("Выберите действие: ")
+    
+    if choice == "1":
+        books = db.get_all()
+        if not books:
+            print("Нет книг")
         else:
-            print("Нет такого пункта. Введите 1-6.")
-
-if __name__ == "__main__":
-    main()
+            for b in books:
+                print(f"{b['id']} | {b['title']} | {b['author']} | {b['year']} | {b['status']}")
+    
+    elif choice == "2":
+        title = input("Название: ")
+        author = input("Автор: ")
+        try:
+            year = int(input("Год: "))
+        except:
+            print("Год должен быть числом")
+            continue
+        status = input("Статус (в наличии/выдана): ")
+        db.add(title, author, year, status)
+        print("Книга добавлена")
+    
+    elif choice == "3":
+        field = input("Искать по полю (title/author/year/status): ")
+        value = input("Что искать: ")
+        results = db.filter(field, value)
+        if not results:
+            print("Ничего не найдено")
+        else:
+            for b in results:
+                print(f"{b['id']} | {b['title']} | {b['author']} | {b['year']} | {b['status']}")
+    
+    elif choice == "4":
+        try:
+            book_id = int(input("ID книги: "))
+            print("Оставьте поле пустым, если не хотите менять")
+            title = input("Новое название: ")
+            author = input("Новый автор: ")
+            year = input("Новый год: ")
+            status = input("Новый статус: ")
+            
+            year = int(year) if year else None
+            
+            result = db.update(book_id, title, author, year, status)
+            if result:
+                print("Книга обновлена")
+            else:
+                print("Книга не найдена")
+        except:
+            print("Ошибка ввода")
+    
+    elif choice == "5":
+        try:
+            book_id = int(input("ID книги: "))
+            if db.delete(book_id):
+                print("Книга удалена")
+            else:
+                print("Книга не найдена")
+        except:
+            print("Ошибка!!")
+    
+    elif choice == "6":
+        field = input("Сортировать по полю (title/author/year/status): ")
+        order = input("1 - по возрастанию, 2 - по убыванию: ")
+        reverse = (order == "2")
+        sorted_books = db.sort(field, reverse)
+        for b in sorted_books:
+            print(f"{b['id']} | {b['title']} | {b['author']} | {b['year']} | {b['status']}")
+    
+    elif choice == "7":
+        print("ПОКА")
+        break
+    
+    else:
+        print("НЕПРАВИЛЬНО. Введите 1-7")
