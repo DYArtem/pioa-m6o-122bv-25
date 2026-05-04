@@ -1,6 +1,8 @@
 from .backend.memory import create_record, select_record, update_record, delete_record
 
+
 next_id = 1
+
 
 def _get_next_id() -> int:
     global next_id
@@ -9,6 +11,7 @@ def _get_next_id() -> int:
         max_id = max(record[0] for record in all_students)
         next_id = max_id + 1
     return next_id
+
 
 def _print_menu() -> None:
     print("\n=== База студентов ===")
@@ -19,6 +22,7 @@ def _print_menu() -> None:
     print("5. Удалить запись")
     print("0. Выход")
 
+
 def _read_int(prompt: str) -> int:
     while True:
         raw = input(prompt).strip()
@@ -26,6 +30,7 @@ def _read_int(prompt: str) -> int:
             return int(raw)
         except ValueError:
             print("Ошибка: введите целое число.")
+
 
 def _read_optional_int(prompt: str) -> int | None:
     while True:
@@ -37,6 +42,7 @@ def _read_optional_int(prompt: str) -> int | None:
         except ValueError:
             print("Ошибка: введите целое число или оставьте поле пустым.")
 
+
 def _print_records(records: list[tuple]) -> None:
     if not records:
         print("Записи не найдены.")
@@ -46,6 +52,7 @@ def _print_records(records: list[tuple]) -> None:
     print("-" * 60)
     for record in records:
         print(f"{record[0]} | {record[1]} | {record[2]} | {record[3]} | {record[4]}")
+
 
 def _add_student() -> None:
     print("\nДобавление записи")
@@ -64,9 +71,11 @@ def _add_student() -> None:
     except ValueError as exc:
         print(f"Ошибка: {exc}")
 
+
 def _show_all_students() -> None:
     print("\nСписок записей")
     _print_records(select_record())
+
 
 def _find_students_by_filter() -> None:
     print("\nПоиск по фильтру (Enter = пропустить поле)")
@@ -87,6 +96,7 @@ def _find_students_by_filter() -> None:
 
     _print_records(records)
 
+
 def _update_student() -> None:
     print("\nОбновление записи")
 
@@ -104,6 +114,7 @@ def _update_student() -> None:
     except ValueError as exc:
         print(f"Ошибка: {exc}")
 
+
 def _delete_student() -> None:
     print("\nУдаление записи")
 
@@ -115,10 +126,10 @@ def _delete_student() -> None:
     except ValueError as exc:
         print(f"Ошибка: {exc}")
 
+
 def run() -> None:
     global next_id
 
-    # Добавим тестовые данные
     try:
         create_record(1, "Иван", "Иванов", 20, "М")
         create_record(2, "Мария", "Иванова", 19, "Ж")
@@ -137,9 +148,7 @@ def run() -> None:
         elif action == "3":
             _find_students_by_filter()
         elif action == "4":
-
-
-_update_student()
+            _update_student()
         elif action == "5":
             _delete_student()
         elif action == "0":
