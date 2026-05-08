@@ -1,91 +1,87 @@
-type StudentRecord = tuple[int, str, str, int, str]
+type Record = tuple[int, ...]
+type TableDict = dict[str, list[Record]]
 
 class Database:
+
     def __init__(self) -> None:
-        self._students: list[StudentRecord] = []
-        self._next_id = 1
+        self._tables: TableDict = {}
+        self._next_ids: dict[str, int] = {}
+
+    def create_table(self, table_name: str) -> None:
+        if table_name in self._tables:
+            raise ValueError(f"Таблица '{table_name}' уже существует.")
+        self._tables[table_name] = []
+        self._next_ids[table_name] = 1
+
+    def get_table_names(self) -> list[str]:
+        return list(self._tables.keys())
+
+    def _get_next_id(self, table_name: str) -> int:
+        current = self._next_ids.get(table_name, 1)
+        self._next_ids[table_name] = current + 1
+        return current
 
     def create_record(
-        self,
-        first_name: str,
-        second_name: str,
-        age: int,
-        gender: str,
-    ) -> StudentRecord:
-        if age < 0:
-            raise ValueError("Возраст не может быть отрицательным.")
+        self, table_name: str, fields: tuple[str, ...], values: tuple
+    ) -> Record:
+        if table_name not in self._tables:
+            raise ValueError(f"Таблица '{table_name}' не найдена.")
 
-        student_id = self._next_id
-        self._next_id += 1
+        if len(fields) != len(values):
+            raise ValueError("Количество полей не совпадает с количеством значений.")
 
-        new_record: StudentRecord = (
-            student_id,
-            first_name.strip(),
-            second_name.strip(),
-            age,
-            gender.strip(),
-        )
+        record_id = self._get_next_id(table_name)
+        record = (record_id,) + values
+        self._tables[table_name].append(record)
+        return record
 
-        self._students.append(new_record)
-        return new_record
-
-    def get_all(self) -> list[StudentRecord]:
-        return self._students.copy()
+    def get_all(self, table_name: str) -> list[Record]:
+        if table_name not in self._tables:
+            raise ValueError(f"Таблица '{table_name}' не найдена.")
+        return self._tables[table_name].copy()
 
     def select_record(
         self,
-        student_id: int | None = None,
-        first_name: str | None = None,
-        second_name: str | None = None,
-        age: int | None = None,
-        gender: str | None = None,
-    ) -> list[StudentRecord]:
-        result = self._students.copy()
+        table_name: str,
+        filters: dict[int, object] | None = None,
+    ) -> list[Record]:
+        if table_name not in self._tables:
+            raise ValueError(f"Таблица '{table_name}' не найдена.")
 
-        if student_id is not None:
-            result = [r for r in result if r[0] == student_id]
-        if first_name is not None:
-            result = [r for r in result if r[1] == first_name]
-        if second_name is not None:
-            result = [r for r in result if r[2] == second_name]
-        if age is not None:
-            result = [r for r in result if r[3] == age]
-        if gender is not None:
-            result = [r for r in result if r[4] == gender]
+        result = self._tables[table_name].copy()
+
+        if filters:
+            for pos, value in filters.items():
+                result = [r for r in result if r[pos] == value]
 
         return result
 
     def update_record(
         self,
-        student_id: int,
-        first_name: str | None = None,
-        second_name: str | None = None,
-        age: int | None = None,
-        gender: str | None = None,
-    ) -> StudentRecord:
-        for i, record in enumerate(self._students):
-            if record[0] == student_id:
-                new_record = list(record)
-                if first_name is not None:
-                    new_record[1] = first_name.strip()
-                if second_name is not None:
-                    new_record[2] = second_name.strip()
-                if age is not None:
-                    if age < 0:
-                        raise ValueError("Возраст не может быть отрицательным.")
-                    new_record[3] = age
-                if gender is not None:
-                    new_record[4] = gender.strip()
+        table_name: str,
+        record_id: int,
+        updates: dict[int, object],
+    ) -> Record:
+        if table_name not in self._tables:
+            raise ValueError(f"Таблица '{table_name}' не найдена.")
 
+        for i, record in enumerate(self._tables[table_name]):
+            if record[0] == record_id:
+                new_record = list(record)
+                for pos, value in updates.items():
+                    new_record[pos] = value
                 updated = tuple(new_record)
-                self._students[i] = updated
+                self._tables[table_name][i] = updated
                 return updated
 
-        raise ValueError(f"Запись с id={student_id} не найдена.")
+        raise ValueError(f"Запись с id={record_id} не найдена в '{table_name}'.")
 
-    def delete_record(self, student_id: int) -> StudentRecord:
-        for i, record in enumerate(self._students):
-            if record[0] == student_id:
-                return self._students.pop(i)
+    def delete_record(self, table_name: str, record_id: int) -> Record:
+        if table_name not in self._tables:
+            raise ValueError(f"Таблица '{table_name}' не найдена.")
 
-        raise ValueError(f"Запись с id={student_id} не найдена.")
+        for i, record in enumerate(self._tables[table_name]):
+            if record[0] == record_id:
+                return self._tables[table_name].pop(i)
+
+        raise ValueError(f"Запись с id={record_id} не найдена в '{table_name}'.")

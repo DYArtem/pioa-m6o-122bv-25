@@ -2,52 +2,49 @@ import unittest
 from src.db.backend.memory import Database
 
 class TestDatabase(unittest.TestCase):
-
-    def setUp(self) -> None:
+    def setUp(self):
         self.db = Database()
 
-    def test_create_record(self) -> None:
-        record = self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        self.assertEqual(record[1], "Анна")
-        self.assertEqual(record[2], "Сидорова")
-        self.assertEqual(record[3], 21)
-        self.assertEqual(record[4], "Ж")
+    def test_create_table(self):
+        self.db.create_table("test")
+        self.assertIn("test", self.db.get_table_names())
 
-    def test_get_all(self) -> None:
-        self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        self.db.create_record("Петр", "Иванов", 22, "М")
-        all_records = self.db.get_all()
-        self.assertEqual(len(all_records), 2)
+    def test_create_record(self):
+        self.db.create_table("students")
+        record = self.db.create_record("students", ("name", "age"), ("Иван", 20))
+        self.assertEqual(record[1], "Иван")
+        self.assertEqual(record[2], 20)
 
-    def test_select_by_id(self) -> None:
-        self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        record2 = self.db.create_record("Петр", "Иванов", 22, "М")
-        result = self.db.select_record(student_id=record2[0])
-        self.assertEqual(len(result), 1)
+    def test_get_all(self):
+        self.db.create_table("students")
+        self.db.create_record("students", ("name",), ("Анна",))
+        self.db.create_record("students", ("name",), ("Петр",))
+        self.assertEqual(len(self.db.get_all("students")), 2)
+
+    def test_select_by_id(self):
+        self.db.create_table("students")
+        self.db.create_record("students", ("name",), ("Анна",))
+        r2 = self.db.create_record("students", ("name",), ("Петр",))
+        result = self.db.select_record("students", {0: r2[0]})
         self.assertEqual(result[0][1], "Петр")
 
-    def test_select_by_first_name(self) -> None:
-        self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        self.db.create_record("Петр", "Иванов", 22, "М")
-        result = self.db.select_record(first_name="Анна")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][2], "Сидорова")
-
-    def test_update_record(self) -> None:
-        record = self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        self.db.update_record(record[0], first_name="Анна Петровна")
-        updated = self.db.select_record(student_id=record[0])
+    def test_update_record(self):
+        self.db.create_table("students")
+        r = self.db.create_record("students", ("name",), ("Анна",))
+        self.db.update_record("students", r[0], {1: "Анна Петровна"})
+        updated = self.db.select_record("students", {0: r[0]})
         self.assertEqual(updated[0][1], "Анна Петровна")
 
-    def test_delete_record(self) -> None:
-        record = self.db.create_record("Анна", "Сидорова", 21, "Ж")
-        self.db.delete_record(record[0])
-        all_records = self.db.get_all()
-        self.assertEqual(len(all_records), 0)
+    def test_delete_record(self):
+        self.db.create_table("students")
+        r = self.db.create_record("students", ("name",), ("Анна",))
+        self.db.delete_record("students", r[0])
+        self.assertEqual(len(self.db.get_all("students")), 0)
 
-    def test_delete_not_found(self) -> None:
+    def test_delete_not_found(self):
+        self.db.create_table("students")
         with self.assertRaises(ValueError):
-            self.db.delete_record(999)
+            self.db.delete_record("students", 999)
 
 if __name__ == "__main__":
     unittest.main()
