@@ -1,238 +1,209 @@
 from .backend.memory import Database
+from .backend.file_database import FileDatabase
+from .backend.csv_database import CSVDatabase
 
 
 class TUI:
+    def __init__(self):
+        print("1. In-memory")
+        print("2. File (JSON)")
+        print("3. File (CSV)")
+        tp = input("Choice: ").strip()
 
-    def __init__(self) -> None:
-        self.db = Database()
-        self._current_table: str | None = None
-        self._table_fields: dict[str, list[str]] = {}
-        self._init_sample_data()
+        if tp == "2":
+            self.db = FileDatabase("data.json")
+            print("Using JSON database")
+        elif tp == "3":
+            self.db = CSVDatabase("data.csv")
+            print("Using CSV database")
+        else:
+            self.db = Database()
+            print("Using in-memory database")
 
-    def _init_sample_data(self) -> None:
+        self.current = None
+        self.fields = {}
+        self._init_sample()
+
+    def _init_sample(self):
         try:
             self.db.create_table("students")
-            self._table_fields["students"] = ["first_name", "second_name", "age", "gender"]
-            self.db.create_record(
-                "students",
-                tuple(self._table_fields["students"]),
-                ("Иван", "Петров", 20, "М"),
-            )
-            self.db.create_record(
-                "students",
-                tuple(self._table_fields["students"]),
-                ("Мария", "Иванова", 19, "Ж"),
-            )
-            self._current_table = "students"
-        except ValueError:
+            self.fields["students"] = ["name", "age"]
+            self.db.create_record("students", ("name", "age"), ("Ivan", 20))
+            self.db.create_record("students", ("name", "age"), ("Maria", 19))
+            self.current = "students"
+        except:
             pass
 
-    def _print_menu(self) -> None:
-        print(f"\n=== Текущая таблица: {self._current_table or 'не выбрана'} ===")
-        print("1. Создать таблицу")
-        print("2. Выбрать таблицу")
-        print("3. Добавить запись")
-        print("4. Показать все записи")
-        print("5. Найти записи")
-        print("6. Обновить запись")
-        print("7. Удалить запись")
-        print("0. Выход")
+    def _print_menu(self):
+        print(f"\n=== Table: {self.current or 'none'} ===")
+        print("1. Create table")
+        print("2. Select table")
+        print("3. Add record")
+        print("4. Show all")
+        print("5. Find records")
+        print("6. Update record")
+        print("7. Delete record")
+        print("0. Exit")
 
-    def _read_int(self, prompt: str) -> int:
+    def _read_int(self, p):
         while True:
-            raw = input(prompt).strip()
             try:
-                return int(raw)
-            except ValueError:
-                print("Ошибка: введите целое число.")
+                return int(input(p))
+            except:
+                print("Error: need number")
 
-    def _read_optional_int(self, prompt: str) -> int | None:
-        while True:
-            raw = input(prompt).strip()
-            if raw == "":
-                return None
-            try:
-                return int(raw)
-            except ValueError:
-                print("Ошибка: введите целое число или оставьте поле пустым.")
+    def _read_opt_int(self, p):
+        s = input(p).strip()
+        return int(s) if s else None
 
-    def _print_records(self, records: list[tuple], fields: list[str]) -> None:
-        if not records:
-            print("Записи не найдены.")
+    def _show(self, recs, flds):
+        if not recs:
+            print("No records")
             return
+        print("\nid | " + " | ".join(flds))
+        print("-" * 40)
+        for r in recs:
+            print(" | ".join(str(x) for x in r))
 
-        header = "id | " + " | ".join(fields)
-        print("\n" + header)
-        print("-" * len(header))
-        for record in records:
-            print(" | ".join(str(x) for x in record))
-
-    def _create_table(self) -> None:
-        print("\nСоздание новой таблицы")
-        name = input("Имя таблицы: ").strip()
+    def _create_table(self):
+        name = input("Table name: ").strip()
         if not name:
-            print("Ошибка: имя не может быть пустым.")
             return
-
-        fields_input = input("Поля (через запятую, без id): ").strip()
-        if not fields_input:
-            print("Ошибка: нужно указать хотя бы одно поле.")
+        flds = input("Fields (comma): ").strip()
+        if not flds:
             return
-
-        fields = [f.strip() for f in fields_input.split(",")]
+        flds = [f.strip() for f in flds.split(",")]
         try:
             self.db.create_table(name)
-            self._table_fields[name] = fields
-            print(f"Таблица '{name}' создана. Поля: id, {', '.join(fields)}")
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            self.fields[name] = flds
+            print(f"Table {name} created")
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def _select_table(self) -> None:
+    def _select_table(self):
         tables = self.db.get_table_names()
         if not tables:
-            print("Нет таблиц. Сначала создайте таблицу (пункт 1).")
+            print("No tables")
             return
-
-        print("Доступные таблицы:", ", ".join(tables))
-        name = input("Имя таблицы: ").strip()
+        print("Tables:", ", ".join(tables))
+        name = input("Name: ").strip()
         if name in tables:
-            self._current_table = name
-            print(f"Переключились на таблицу '{name}'")
+            self.current = name
+            print(f"Switched to {name}")
         else:
-            print(f"Таблица '{name}' не найдена.")
+            print("Not found")
 
-    def _add_record(self) -> None:
-        if not self._current_table:
-            print("Сначала выберите таблицу (пункт 2).")
+    def _add_record(self):
+        if not self.current:
+            print("Select table first")
             return
-
-        fields = self._table_fields.get(self._current_table, [])
-        if not fields:
-            print("Ошибка: поля таблицы не определены.")
+        flds = self.fields.get(self.current, [])
+        if not flds:
             return
-
-        print("\nДобавление записи")
-        values = []
-        for f in fields:
-            val = input(f"{f}: ").strip()
+        vals = []
+        for f in flds:
+            v = input(f"{f}: ").strip()
             if f == "age":
                 try:
-                    val = int(val)
-                except ValueError:
-                    print("Ошибка: возраст должен быть числом.")
+                    v = int(v)
+                except:
+                    print("Age must be number")
                     return
-            values.append(val)
-
+            vals.append(v)
         try:
-            record = self.db.create_record(
-                self._current_table, tuple(fields), tuple(values)
-            )
-            print(f"Запись добавлена: {record}")
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            r = self.db.create_record(self.current, tuple(flds), tuple(vals))
+            print(f"Added: {r}")
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def _show_all(self) -> None:
-        if not self._current_table:
-            print("Сначала выберите таблицу (пункт 2).")
+    def _show_all(self):
+        if not self.current:
+            print("Select table first")
             return
-
         try:
-            records = self.db.get_all(self._current_table)
-            fields = self._table_fields.get(self._current_table, [])
-            self._print_records(records, fields)
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            recs = self.db.get_all(self.current)
+            flds = self.fields.get(self.current, [])
+            self._show(recs, flds)
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def _find_records(self) -> None:
-        if not self._current_table:
-            print("Сначала выберите таблицу (пункт 2).")
+    def _find(self):
+        if not self.current:
+            print("Select table first")
             return
-
-        fields = self._table_fields.get(self._current_table, [])
-        print("\nПоиск по фильтру (Enter = пропустить поле)")
-        filters = {}
-        for i, f in enumerate(fields, start=1):
-            val = input(f"{f}: ").strip()
-            if val:
+        flds = self.fields.get(self.current, [])
+        filt = {}
+        for i, f in enumerate(flds, 1):
+            v = input(f"{f} (Enter to skip): ").strip()
+            if v:
                 if f == "age":
                     try:
-                        val = int(val)
-                    except ValueError:
-                        print("Ошибка: возраст должен быть числом.")
+                        v = int(v)
+                    except:
+                        print("Age must be number")
                         return
-                filters[i] = val
-
+                filt[i] = v
         try:
-            records = self.db.select_record(self._current_table, filters or None)
-            self._print_records(records, fields)
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            recs = self.db.select_record(self.current, filt or None)
+            self._show(recs, flds)
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def _update_record(self) -> None:
-        if not self._current_table:
-            print("Сначала выберите таблицу (пункт 2).")
+    def _update(self):
+        if not self.current:
+            print("Select table first")
             return
-
-        fields = self._table_fields.get(self._current_table, [])
-        record_id = self._read_int("ID записи для обновления: ")
-
-        print("Оставьте поле пустым, если не хотите менять")
-        updates = {}
-        for i, f in enumerate(fields, start=1):
-            val = input(f"{f}: ").strip()
-            if val:
+        flds = self.fields.get(self.current, [])
+        rid = self._read_int("Record ID: ")
+        upd = {}
+        for i, f in enumerate(flds, 1):
+            v = input(f"{f} (new, Enter to skip): ").strip()
+            if v:
                 if f == "age":
                     try:
-                        val = int(val)
-                    except ValueError:
-                        print("Ошибка: возраст должен быть числом.")
+                        v = int(v)
+                    except:
+                        print("Age must be number")
                         return
-                updates[i] = val
-
-        if not updates:
-            print("Ничего не изменено.")
+                upd[i] = v
+        if not upd:
             return
-
         try:
-            record = self.db.update_record(self._current_table, record_id, updates)
-            print(f"Запись обновлена: {record}")
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            r = self.db.update_record(self.current, rid, upd)
+            print(f"Updated: {r}")
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def _delete_record(self) -> None:
-        if not self._current_table:
-            print("Сначала выберите таблицу (пункт 2).")
+    def _delete(self):
+        if not self.current:
+            print("Select table first")
             return
-
-        record_id = self._read_int("ID записи для удаления: ")
-
+        rid = self._read_int("Record ID: ")
         try:
-            record = self.db.delete_record(self._current_table, record_id)
-            print(f"Запись удалена: {record}")
-        except ValueError as e:
-            print(f"Ошибка: {e}")
+            r = self.db.delete_record(self.current, rid)
+            print(f"Deleted: {r}")
+        except Exception as e:
+            print(f"Error: {e}")
 
-    def run(self) -> None:
+    def run(self):
         while True:
             self._print_menu()
-            action = input("Выберите действие: ").strip()
-
-            if action == "1":
+            cmd = input("> ").strip()
+            if cmd == "1":
                 self._create_table()
-            elif action == "2":
+            elif cmd == "2":
                 self._select_table()
-            elif action == "3":
+            elif cmd == "3":
                 self._add_record()
-            elif action == "4":
+            elif cmd == "4":
                 self._show_all()
-            elif action == "5":
-                self._find_records()
-            elif action == "6":
-                self._update_record()
-            elif action == "7":
-                self._delete_record()
-            elif action == "0":
-                print("Выход из программы.")
+            elif cmd == "5":
+                self._find()
+            elif cmd == "6":
+                self._update()
+            elif cmd == "7":
+                self._delete()
+            elif cmd == "0":
                 break
             else:
-                print("Неизвестная команда. Повторите ввод.")
+                print("Wrong command")
