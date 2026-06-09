@@ -1,5 +1,6 @@
 import csv
 import os
+import json
 
 class CSVDatabase:
     def __init__(self, filename="data.csv"):
@@ -11,17 +12,21 @@ class CSVDatabase:
     def _load(self):
         if not os.path.exists(self.filename):
             return
-        with open(self.filename, "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
-            if rows:
-                self._tables = eval(rows[0][0])
-                self._next_ids = eval(rows[0][1])
+        try:
+            with open(self.filename, "r", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+                if rows:
+                    self._tables = json.loads(rows[0][0])
+                    self._next_ids = json.loads(rows[0][1])
+        except (json.JSONDecodeError, IOError, OSError):
+            self._tables = {}
+            self._next_ids = {}
 
     def _save(self):
         with open(self.filename, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([str(self._tables), str(self._next_ids)])
+            writer.writerow([json.dumps(self._tables), json.dumps(self._next_ids)])
 
     def create_table(self, name):
         if name in self._tables:

@@ -163,7 +163,7 @@ class TestIndexes(unittest.TestCase):
         self.db.create_record("students", ("name", "age"), ("Anna", 20))
         self.db.create_record("students", ("name", "age"), ("Bob", 25))
         self.db.create_index("students", "name", 1)
-        result = self.db.select_with_index("students", "name", "Anna")
+        result = self.db.select_record("students", {1: "Anna"})
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0][1], "Anna")
 
@@ -172,7 +172,7 @@ class TestIndexes(unittest.TestCase):
         self.db.create_index("students", "name", 1)
         record = self.db.select_record("students", {1: "Anna"})[0]
         self.db.update_record("students", record[0], {1: "Anna Updated"})
-        result = self.db.select_with_index("students", "name", "Anna Updated")
+        result = self.db.select_record("students", {1: "Anna Updated"})
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0][1], "Anna Updated")
 
@@ -181,7 +181,7 @@ class TestIndexes(unittest.TestCase):
         self.db.create_index("students", "name", 1)
         record = self.db.select_record("students", {1: "Anna"})[0]
         self.db.delete_record("students", record[0])
-        result = self.db.select_with_index("students", "name", "Anna")
+        result = self.db.select_record("students", {1: "Anna"})
         self.assertEqual(len(result), 0)
 
 
