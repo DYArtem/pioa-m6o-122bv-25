@@ -31,7 +31,7 @@ class TUI:
             self.db.create_record("students", ("name", "age"), ("Ivan", 20))
             self.db.create_record("students", ("name", "age"), ("Maria", 19))
             self.current = "students"
-        except:
+        except ValueError:
             pass
 
     def _print_menu(self):
@@ -49,12 +49,18 @@ class TUI:
         while True:
             try:
                 return int(input(p))
-            except:
+            except ValueError:
                 print("Error: need number")
 
     def _read_opt_int(self, p):
         s = input(p).strip()
-        return int(s) if s else None
+        if s == "":
+            return None
+        try:
+            return int(s)
+        except ValueError:
+            print("Error: need number or empty")
+            return None
 
     def _show(self, recs, flds):
         if not recs:
@@ -77,7 +83,7 @@ class TUI:
             self.db.create_table(name)
             self.fields[name] = flds
             print(f"Table {name} created")
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def _select_table(self):
@@ -106,14 +112,14 @@ class TUI:
             if f == "age":
                 try:
                     v = int(v)
-                except:
+                except ValueError:
                     print("Age must be number")
                     return
             vals.append(v)
         try:
             r = self.db.create_record(self.current, tuple(flds), tuple(vals))
             print(f"Added: {r}")
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def _show_all(self):
@@ -124,7 +130,7 @@ class TUI:
             recs = self.db.get_all(self.current)
             flds = self.fields.get(self.current, [])
             self._show(recs, flds)
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def _find(self):
@@ -139,14 +145,14 @@ class TUI:
                 if f == "age":
                     try:
                         v = int(v)
-                    except:
+                    except ValueError:
                         print("Age must be number")
                         return
                 filt[i] = v
         try:
             recs = self.db.select_record(self.current, filt or None)
             self._show(recs, flds)
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def _update(self):
@@ -155,6 +161,8 @@ class TUI:
             return
         flds = self.fields.get(self.current, [])
         rid = self._read_int("Record ID: ")
+        if rid is None:
+            return
         upd = {}
         for i, f in enumerate(flds, 1):
             v = input(f"{f} (new, Enter to skip): ").strip()
@@ -162,7 +170,7 @@ class TUI:
                 if f == "age":
                     try:
                         v = int(v)
-                    except:
+                    except ValueError:
                         print("Age must be number")
                         return
                 upd[i] = v
@@ -171,7 +179,7 @@ class TUI:
         try:
             r = self.db.update_record(self.current, rid, upd)
             print(f"Updated: {r}")
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def _delete(self):
@@ -179,10 +187,12 @@ class TUI:
             print("Select table first")
             return
         rid = self._read_int("Record ID: ")
+        if rid is None:
+            return
         try:
             r = self.db.delete_record(self.current, rid)
             print(f"Deleted: {r}")
-        except Exception as e:
+        except ValueError as e:
             print(f"Error: {e}")
 
     def run(self):
