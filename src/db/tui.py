@@ -36,92 +36,101 @@ class TUI:
                 return int(input(p))
             except ValueError:
                 print("Need number")
+            except EOFError:
+                print("\nExiting...")
+                return 0
 
     def run(self):
         while True:
-            self._print_menu()
-            cmd = input("> ").strip()
-
-            if cmd == "1":
-                name = input("Table name: ").strip()
-                fields = input("Fields (comma): ").strip()
-                fields = [f.strip() for f in fields.split(",")]
-                try:
-                    self.db.create_table(name, fields)
-                    print(f"Table {name} created")
-                except ValueError as e:
-                    print(e)
-            elif cmd == "2":
-                tables = self.db.get_table_names()
-                if not tables:
-                    print("No tables")
-                    continue
-                print("Tables:", ", ".join(tables))
-                name = input("Select: ").strip()
-                if name in tables:
-                    self.current_table = name
-                    print(f"Selected {name}")
+            try:
+                self._print_menu()
+                cmd = input("> ").strip()
+                if cmd == "1":
+                    name = input("Table name: ").strip()
+                    fields = input("Fields (comma): ").strip()
+                    fields = [f.strip() for f in fields.split(",")]
+                    try:
+                        self.db.create_table(name, fields)
+                        print(f"Table {name} created")
+                    except ValueError as e:
+                        print(e)
+                elif cmd == "2":
+                    tables = self.db.get_table_names()
+                    if not tables:
+                        print("No tables")
+                        continue
+                    print("Tables:", ", ".join(tables))
+                    name = input("Select: ").strip()
+                    if name in tables:
+                        self.current_table = name
+                        print(f"Selected {name}")
+                    else:
+                        print("Not found")
+                elif cmd == "3":
+                    if not self.current_table:
+                        print("No table selected")
+                        continue
+                    schema = self.db.get_schema(self.current_table)
+                    values = []
+                    for f in schema:
+                        v = input(f"{f}: ").strip()
+                        values.append(v)
+                    try:
+                        r = self.db.insert(self.current_table, tuple(values))
+                        print(f"Inserted: {r}")
+                    except ValueError as e:
+                        print(e)
+                elif cmd == "4":
+                    if not self.current_table:
+                        print("No table selected")
+                        continue
+                    for r in self.db.get_all(self.current_table):
+                        print(r)
+                elif cmd == "5":
+                    if not self.current_table:
+                        print("No table selected")
+                        continue
+                    schema = self.db.get_schema(self.current_table)
+                    filters = {}
+                    for f in schema:
+                        v = input(f"{f} (enter to skip): ").strip()
+                        if v:
+                            filters[f] = v
+                    try:
+                        for r in self.db.select(self.current_table, filters):
+                            print(r)
+                    except ValueError as e:
+                        print(e)
+                elif cmd == "6":
+                    if not self.current_table:
+                        print("No table selected")
+                        continue
+                    rid = self._read_int("Record ID: ")
+                    schema = self.db.get_schema(self.current_table)
+                    updates = {}
+                    for f in schema:
+                        v = input(f"{f} (new, enter to skip): ").strip()
+                        if v:
+                            updates[f] = v
+                    try:
+                        self.db.update(self.current_table, rid, updates)
+                        print("Updated")
+                    except ValueError as e:
+                        print(e)
+                elif cmd == "7":
+                    if not self.current_table:
+                        print("No table selected")
+                        continue
+                    rid = self._read_int("Record ID: ")
+                    try:
+                        self.db.delete(self.current_table, rid)
+                        print("Deleted")
+                    except ValueError as e:
+                        print(e)
+                elif cmd == "0":
+                    break
                 else:
-                    print("Not found")
-            elif cmd == "3":
-                if not self.current_table:
-                    print("No table selected")
-                    continue
-                schema = self.db.get_schema(self.current_table)
-                values = []
-                for f in schema:
-                    v = input(f"{f}: ").strip()
-                    values.append(v)
-                try:
-                    r = self.db.insert(self.current_table, tuple(values))
-                    print(f"Inserted: {r}")
-                except ValueError as e:
-                    print(e)
-            elif cmd == "4":
-                if not self.current_table:
-                    print("No table selected")
-                    continue
-                for r in self.db.get_all(self.current_table):
-                    print(r)
-            elif cmd == "5":
-                if not self.current_table:
-                    print("No table selected")
-                    continue
-                schema = self.db.get_schema(self.current_table)
-                filters = {}
-                for i, f in enumerate(schema, 1):
-                    v = input(f"{f} (enter to skip): ").strip()
-                    if v:
-                        filters[i] = v
-                for r in self.db.select(self.current_table, filters):
-                    print(r)
-            elif cmd == "6":
-                if not self.current_table:
-                    print("No table selected")
-                    continue
-                rid = self._read_int("Record ID: ")
-                schema = self.db.get_schema(self.current_table)
-                updates = {}
-                for i, f in enumerate(schema, 1):
-                    v = input(f"{f} (new value, enter to skip): ").strip()
-                    if v:
-                        updates[i] = v
-                try:
-                    self.db.update(self.current_table, rid, updates)
-                    print("Updated")
-                except ValueError as e:
-                    print(e)
-            elif cmd == "7":
-                if not self.current_table:
-                    print("No table selected")
-                    continue
-                rid = self._read_int("Record ID: ")
-                try:
-                    self.db.delete(self.current_table, rid)
-                    print("Deleted")
-                except ValueError as e:
-                    print(e)
-            elif cmd == "0":
+                    print("Wrong command")
+            except EOFError:
+                print("\nExiting...")
                 break
-            else:
-                print("Wrong command")
